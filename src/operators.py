@@ -12,7 +12,7 @@ def do_upload(table_name, img_path, model, milvus_client):
         if not table_name:
             table_name = DEFAULT_TABLE
         milvus_client.create_collection(table_name)
-        feat = model.resnet50_extract_feat(img_path)
+        feat = model.image_extract_feat(img_path)
         data = milvus_client.insert(table_name, [img_path], [feat])
         return data
     except Exception as e:
@@ -35,7 +35,7 @@ def extract_features(img_dir, model):
         cache['total'] = total
         for i, img_path in enumerate(img_list):
             try:
-                norm_feat = model.resnet50_extract_feat(img_path)
+                norm_feat = model.image_extract_feat(img_path)
                 feats.append(norm_feat)
                 names.append(img_path)
                 cache['current'] = i + 1
@@ -62,7 +62,7 @@ def do_search(table_name, img_path, top_k, model, milvus_client):
     try:
         if not table_name:
             table_name = DEFAULT_TABLE
-        feat = model.resnet50_extract_feat(img_path)
+        feat = model.image_extract_feat(img_path)
         searchData = milvus_client.search_vectors(table_name, [feat], top_k)
         return searchData
     except Exception as e:

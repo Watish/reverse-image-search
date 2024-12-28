@@ -7,7 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
 from milvus_helpers import MilvusHelper
 from config import TOP_K, UPLOAD_PATH, DEFAULT_TABLE
-from encode import ResNet50
+from encode import ImageModel
 from operators import do_load, do_upload, do_search, do_count, do_drop, drop_image
 from logs import LOGGER
 from pydantic import BaseModel
@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODEL = ResNet50()
+MODEL = ImageModel()
 MILVUS_CLI = MilvusHelper()
 MILVUS_CLI.init_default()
 
@@ -148,8 +148,10 @@ async def search_images(image: UploadFile = File(...), topk: int = Form(TOP_K), 
         img_path = os.path.join(UPLOAD_PATH, image.filename)
         with open(img_path, "wb+") as f:
             f.write(content)
+        f.close()
         res = do_search(table_name, img_path, topk, MODEL, MILVUS_CLI)
         LOGGER.info("Successfully searched similar images!")
+        os.unlink(img_path)
         return {'status': True, 'data': res}
     except Exception as e:
         LOGGER.error(e)

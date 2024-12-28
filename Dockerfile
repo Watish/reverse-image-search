@@ -1,5 +1,5 @@
 # 使用镜像代理
-FROM dh.noio.top/python:3.12-slim-bullseye
+FROM python:3.12-slim-bullseye
 
 RUN sed -i -E "s/\w+.debian.org/mirrors.tuna.tsinghua.edu.cn/g" /etc/apt/sources.list
 RUN apt-get update && \

@@ -1,5 +1,6 @@
 import os
 import sys
+
 from config import VECTOR_DIMENSION, METRIC_TYPE, DEFAULT_TABLE
 from pymilvus import DataType, MilvusClient
 from logs import LOGGER
@@ -107,21 +108,21 @@ class MilvusHelper:
             uuids = generate_uuids(len(path))
             # 将 uuid 添加到 data
             rows = []
-            for index, _ in enumerate(vectors):
+            for index, tmpVector in enumerate(vectors):
                 # 计算md5
                 md5 = get_file_md5(path[index])
                 if md5 is None:
                     md5 = ""
+                alreadyExists = False
+
                 row = {
                     "meta": {
                         "path": path[index]
                     },
-                    "embedding": vectors[index],
+                    "embedding": tmpVector,
                     "uuid": uuids[index],
                     "md5": md5
                 }
-
-                alreadyExists = False
 
                 if md5 != "":
                     targetRes = self.client.query(filter=f"md5 == \"{md5}\"", collection_name=collection_name, limit=1)
@@ -164,6 +165,8 @@ class MilvusHelper:
 
     def search_vectors(self, collection_name, vectors, top_k):
         LOGGER.debug(f"Vectors for search: {vectors}")
+        print(len(vectors[0]))
+        print(vectors[0])
         try:
             search_params = {"metric_type": METRIC_TYPE, "params": {"nprobe": 16}}
             res = self.client.search(collection_name, data=vectors, anns_field="embedding", search_params=search_params
