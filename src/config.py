@@ -6,6 +6,7 @@ METRIC_TYPE = os.getenv("METRIC_TYPE", "L2")
 DEFAULT_TABLE = os.getenv("DEFAULT_TABLE", "default")
 TOP_K = int(os.getenv("TOP_K", "10"))
 
-UPLOAD_PATH = os.getenv("UPLOAD_PATH", "tmp/upload")
+UPLOAD_PATH = os.getenv("UPLOAD_PATH", "data/upload")
+DATA_PATH = os.getenv("DATA_PATH", "data")
 
 LOGS_NUM = int(os.getenv("logs_num", "0"))

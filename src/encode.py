@@ -21,8 +21,6 @@ def normalize_and_adjust(vector: np.ndarray) -> np.ndarray:
 
     return vector
 
-
-
 class ImageModel:
     def __init__(self):
         self.pipe = (
@@ -33,21 +31,41 @@ class ImageModel:
             .map('embedding', 'normalized_embedding', normalize_and_adjust)  # 向量归一化
             .output("normalized_embedding")
         )
-        # self.pipe = (towhee.dummy_input()
-        #              .image_decode()
-        #              .image_embedding.timm(model_name='efficientnet_b2_pruned')
-        #              .tensor_normalize()
-        #              .as_function()
-        #              )
+        self.imageTextPipe = (
+            towhee.pipe.input('url')
+            .map('url', 'img', towhee.ops.image_decode.cv2_rgb())
+            .map('img', 'vec', towhee.ops.image_text_embedding.clip(model_name='clip_vit_base_patch16', modality='image'))
+            .output('vec')
+        )
+        self.imageTextPipe = (
+            towhee.pipe.input('text')
+            .map('text', 'vec', towhee.ops.image_text_embedding.clip(model_name='clip_vit_base_patch16', modality='text'))
+            .output('vec')
+        )
+        self.image2TextPipe = (
+            towhee.pipe.input('url')
+            .map('url', 'img', towhee.ops.image_decode.cv2_rgb())
+            .map('img', 'text', towhee.ops.image_captioning.clip_caption_reward(model_name='clipRN50_clips_grammar'))
+            .output('text')
+        )
 
     def image_extract_feat(self, img_path):
         feat = self.pipe(img_path).get()[0]
-        # if isinstance(feat, _Reason):
-        #     raise feat.exception
         return feat
 
+    def image_to_text(self, img_path):
+        feat = self.image2TextPipe(img_path).get()[0]
+        return feat
+
+    def image_text_extract_feat(self, img_path):
+        feat = self.imageTextPipe(img_path).get()[0]
+        return feat
 
 if __name__ == "__main__":
-    res = ImageModel().image_extract_feat('https://i1.sinaimg.cn/dy/deco/2013/0329/logo/LOGO_1x.png')
-    print(len(res))
+    imagePath = 'https://cross-java-images.oss-cn-zhangjiakou.aliyuncs.com/lglv998/abe83fc4cc91c91538e803bbf37cc886.jpg'
+    res = ImageModel().image_extract_feat(img_path=imagePath)
     print(res)
+    # res = ImageModel().image_to_text(img_path=imagePath)
+    # print(res)
+    # res = ImageModel().image_text_extract_feat(img_path=imagePath)
+    # print(res)

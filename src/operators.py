@@ -11,6 +11,15 @@ def do_upload(table_name, img_path, model, milvus_client):
     try:
         if not table_name:
             table_name = DEFAULT_TABLE
+        fileMd5 = get_file_md5(img_path)
+        if fileMd5 is not None:
+            # 文件存在
+            resList = milvus_client.client.query(filter=f"md5 == \"{fileMd5}\"", collection_name=table_name,
+                                                 output_fields=["uuid", "meta", "md5"])
+            if len(resList) > 0:
+                print(f"MD5 {fileMd5}| 文件存在")
+                return resList
+
         milvus_client.create_collection(table_name)
         feat = model.image_extract_feat(img_path)
         data = milvus_client.insert(table_name, [img_path], [feat])

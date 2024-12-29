@@ -114,10 +114,11 @@ class MilvusHelper:
                 if md5 is None:
                     md5 = ""
                 alreadyExists = False
-
+                ext = path[index].split(".")[-1]
                 row = {
                     "meta": {
-                        "path": path[index]
+                        "path": path[index],
+                        "ext": ext
                     },
                     "embedding": tmpVector,
                     "uuid": uuids[index],

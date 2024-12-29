@@ -15,10 +15,16 @@ WORKDIR /app/src
 COPY . /app
 
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
 RUN  cd /app/src && \
      pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && \
      pip install -r requirements.txt && pip install python-multipart &&  pip cache purge
-RUN python3 encode.py
+
+# 初始化环境
+RUN cd /app/src && python3 encode.py
+
+# 清除项目缓存
+RUN rm /app/src/tmp -r && rm /app/src/data -r
 
 EXPOSE 5000
 
