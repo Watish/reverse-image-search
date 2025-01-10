@@ -51,6 +51,7 @@ def get_img(uuid: str):
             "msg": "图片不存在"
         })
     imageItem = resList[0]
+    print(imageItem)
     uuid = imageItem["uuid"]
     meta = imageItem["meta"]
     if "ext" in meta:
