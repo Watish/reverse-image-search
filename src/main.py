@@ -240,12 +240,11 @@ async def query_images_ids(ids):
             'error': "参数非法"
         }
     rawIds = str.split(ids, ",")
-    resList = []
+    ids = []
     for idStr in rawIds:
-        tmp = MILVUS_CLI.client.get(collection_name=DEFAULT_TABLE, ids=int(idStr), output_fields=["id", "uuid", "md5", "meta"])
-        if tmp:
-            resList.append(tmp)
-
+        ids.append(int(idStr))
+    print(ids)
+    resList = MILVUS_CLI.client.get(collection_name=DEFAULT_TABLE, ids=ids, output_fields=["id", "uuid", "md5", "meta"])
     return {
         "status": True,
         "data": resList
