@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -102,7 +103,7 @@ class MilvusHelper:
             LOGGER.error(f"Failed to load data to Milvus: {e}")
             sys.exit(1)
 
-    def insert(self, collection_name, path, vectors):
+    def insert(self, collection_name, path, vectors, group, extra):
         # Batch insert vectors to milvus collection
         try:
             uuids = generate_uuids(len(path))
@@ -124,6 +125,13 @@ class MilvusHelper:
                     "uuid": uuids[index],
                     "md5": md5
                 }
+                if group is not None:
+                    row["meta"]["group"] = group
+                if extra is not None:
+                    extraJson = json.loads(extra)
+                    if extraJson:
+                        for key in extraJson:
+                            row["meta"][key] = extraJson[key]
 
                 if md5 != "":
                     targetRes = self.client.query(filter=f"md5 == \"{md5}\"", collection_name=collection_name, limit=1)
@@ -164,23 +172,30 @@ class MilvusHelper:
             LOGGER.error(f"Failed to drop collection: {e}")
             sys.exit(1)
 
-    def search_vectors(self, collection_name, vectors, top_k):
+    def search_vectors(self, collection_name, vectors, top_k, group):
         LOGGER.debug(f"Vectors for search: {vectors}")
         print(len(vectors[0]))
         print(vectors[0])
         try:
+            filter = ""
+            if group is not None:
+                filter = f'meta["group"] == "{group}"'
             search_params = {"metric_type": METRIC_TYPE, "params": {"nprobe": 16}}
             res = self.client.search(collection_name, data=vectors, anns_field="embedding", search_params=search_params
-                                     , limit=top_k, output_fields=["uuid"])
+                                     , limit=top_k, output_fields=["uuid"], filter=filter)
             LOGGER.debug(f"Successfully search in collection: {res}")
             return res
         except Exception as e:
             LOGGER.error(f"Failed to search vectors in Milvus: {e}")
             sys.exit(1)
 
-    def drop_uuid(self, collection_name, uuid):
-        return self.client.delete(collection_name=collection_name,
+    def drop_uuid(self, collection_name, uuid, group):
+        print(f"Dropping Image UUID : {uuid} , Group {group}")
+        if group is None or group == "":
+            self.client.delete(collection_name=collection_name,
                                   filter=f"uuid == \"{uuid}\"")
+        else:
+            self.client.delete(collection_name=collection_name,filter=f"uuid == \"{uuid}\" and meta[\"group\"] == \"{group}\"")
 
     def count(self, collection_name):
         try:

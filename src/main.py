@@ -43,9 +43,10 @@ if not os.path.exists(UPLOAD_PATH):
 @app.get('/img/download')
 def get_img(uuid: str):
     # 查询是否存在
-    resList = MILVUS_CLI.client.query(filter=f"uuid == \"{uuid}\"", collection_name=DEFAULT_TABLE, output_fields=["uuid", "meta", "md5"])
+    resList = MILVUS_CLI.client.query(filter=f"uuid == \"{uuid}\"", collection_name=DEFAULT_TABLE,
+                                      output_fields=["uuid", "meta", "md5"])
     if len(resList) == 0:
-        return JSONResponse(status_code=404,content={
+        return JSONResponse(status_code=404, content={
             "status": False,
             "msg": "图片不存在"
         })
@@ -53,13 +54,13 @@ def get_img(uuid: str):
     uuid = imageItem["uuid"]
     meta = imageItem["meta"]
     if "ext" in meta:
-        return JSONResponse(status_code=404,content={
+        return JSONResponse(status_code=404, content={
             "status": False,
             "msg": "图片不存在"
         })
     ext = meta["ext"]
     if not os.path.exists(os.path.join(UPLOAD_PATH, f"{uuid}.{ext}")):
-        return JSONResponse(status_code=404,content={
+        return JSONResponse(status_code=404, content={
             "status": False,
             "msg": "图片不存在"
         })
@@ -83,7 +84,7 @@ class Item(BaseModel):
 
 
 @app.post('/img/upload')
-async def upload_images(image: UploadFile = File(None), url: str = None, table_name: str = None):
+async def upload_images(image: UploadFile = File(None), url: str = None, table_name: str = None, group: str = None):
     # Insert the upload image to Milvus/MySQL
     try:
         # Save the upload image to server.
@@ -99,17 +100,17 @@ async def upload_images(image: UploadFile = File(None), url: str = None, table_n
             urlretrieve(url, img_path)
         else:
             return {'status': False, 'msg': 'Image and url are required'}
-        resData = do_upload(table_name, img_path, MODEL, MILVUS_CLI)
+        resData = do_upload(table_name, img_path, MODEL, MILVUS_CLI, group)
         return {'status': True, 'data': resData}
     except Exception as e:
         LOGGER.error(e)
         return {'status': False, 'msg': e}
 
 
-@app.post('/train/image/upload')
-async def train_image_upload(image: UploadFile = File(None), delete: bool = Form(False)):
+@app.post('/train/image/upload')  #上传训练单张图片
+async def train_image_upload(image: UploadFile = File(None), delete: bool = Form(False), group: str = Form(None), extra: str = Form(None)):
+    print(f"/train/image/upload group {group}, extra {extra}")
     try:
-        # TODO 缺少meta属性的写入
         if image is None:
             return {'status': False, 'msg': 'Image is required'}
 
@@ -120,7 +121,7 @@ async def train_image_upload(image: UploadFile = File(None), delete: bool = Form
         with open(img_path, "wb+") as f:
             f.write(content)
         f.close()
-        trainData = do_upload(DEFAULT_TABLE, img_path, MODEL, MILVUS_CLI)
+        trainData = do_upload(DEFAULT_TABLE, img_path, MODEL, MILVUS_CLI, group, extra)
         if len(trainData) < 1:
             return {'status': False, 'msg': '训练失败'}
         print("trainData", trainData)
@@ -142,21 +143,24 @@ async def train_image_upload(image: UploadFile = File(None), delete: bool = Form
         LOGGER.error(e)
         return {'status': False, 'msg': "训练异常"}
 
+
+#删除单张图片
 @app.get('/train/image/delete')
-async def train_image_delete(uuid):
+async def train_image_delete(uuid: str, group: str):
     try:
         if uuid is None:
             return {'status': False, 'msg': 'UUID is required'}
 
-        resData = drop_image(DEFAULT_TABLE, uuid=uuid, milvus_cli=MILVUS_CLI)
+        resData = drop_image(DEFAULT_TABLE, uuid=uuid, milvus_cli=MILVUS_CLI, group=group)
         return {'status': True, 'data': resData}
     except Exception as e:
         LOGGER.error(e)
         return {'status': False, 'msg': "删除异常"}
 
 
+#搜索某张图片
 @app.post('/img/search')
-async def search_images(image: UploadFile = File(...), topk: int = Form(TOP_K)):
+async def search_images(image: UploadFile = File(...), topk: int = Form(TOP_K), group: str = Form(None)):
     # Search the upload image in Milvus/MySQL
     try:
         # Save the upload image to server.
@@ -167,9 +171,9 @@ async def search_images(image: UploadFile = File(...), topk: int = Form(TOP_K)):
         with open(img_path, "wb+") as f:
             f.write(content)
         f.close()
-        res = do_search(DEFAULT_TABLE, img_path, topk, MODEL, MILVUS_CLI)
+        res = do_search(DEFAULT_TABLE, img_path, topk, MODEL, MILVUS_CLI, group)
         LOGGER.info("Successfully searched similar images!")
-        os.unlink(img_path) # 删除上传文件
+        os.unlink(img_path)  # 删除上传文件
         return {'status': True, 'data': res}
     except Exception as e:
         LOGGER.error(e)
@@ -186,7 +190,6 @@ async def count_images():
     except Exception as e:
         LOGGER.error(e)
         return {'status': False, 'msg': e}
-
 
 
 if __name__ == '__main__':

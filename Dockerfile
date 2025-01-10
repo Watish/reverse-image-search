@@ -12,7 +12,7 @@ RUN mkdir /app/src/data -p
 VOLUME /app/src/data
 
 WORKDIR /app/src
-COPY . /app
+COPY ./src /app/src
 
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 

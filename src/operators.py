@@ -7,14 +7,17 @@ from config import DEFAULT_TABLE
 from logs import LOGGER
 
 
-def do_upload(table_name, img_path, model, milvus_client):
+def do_upload(table_name, img_path, model, milvus_client, group, extra):
     try:
         if not table_name:
             table_name = DEFAULT_TABLE
         fileMd5 = get_file_md5(img_path)
         if fileMd5 is not None:
             # 文件存在
-            resList = milvus_client.client.query(filter=f"md5 == \"{fileMd5}\"", collection_name=table_name,
+            filter = f"md5 == \"{fileMd5}\""
+            if group is not None:
+                filter += f" and meta[\"group\"] == \"{group}\""
+            resList = milvus_client.client.query(filter=filter, collection_name=table_name,
                                                  output_fields=["uuid", "meta", "md5"])
             if len(resList) > 0:
                 print(f"MD5 {fileMd5}| 文件存在")
@@ -22,7 +25,7 @@ def do_upload(table_name, img_path, model, milvus_client):
 
         milvus_client.create_collection(table_name)
         feat = model.image_extract_feat(img_path)
-        data = milvus_client.insert(table_name, [img_path], [feat])
+        data = milvus_client.insert(table_name, [img_path], [feat], group, extra)
         return data
     except Exception as e:
         LOGGER.error(f"Error with upload : {e}")
@@ -67,12 +70,12 @@ def do_load(table_name, image_dir, model, milvus_client):
     return data
 
 
-def do_search(table_name, img_path, top_k, model, milvus_client):
+def do_search(table_name, img_path, top_k, model, milvus_client, group):
     try:
         if not table_name:
             table_name = DEFAULT_TABLE
         feat = model.image_extract_feat(img_path)
-        searchData = milvus_client.search_vectors(table_name, [feat], top_k)
+        searchData = milvus_client.search_vectors(table_name, [feat], top_k, group)
         return searchData
     except Exception as e:
         LOGGER.error(f"Error with search : {e}")
@@ -105,10 +108,10 @@ def do_drop(table_name, milvus_cli):
         sys.exit(1)
 
 
-def drop_image(table_name, uuid: str, milvus_cli):
+def drop_image(table_name, uuid: str, milvus_cli, group):
     if not table_name:
         table_name = DEFAULT_TABLE
-    return milvus_cli.drop_uuid(collection_name=table_name, uuid=uuid)
+    return milvus_cli.drop_uuid(collection_name=table_name, uuid=uuid, group=group)
 
 
 def generate_uuids(length):
