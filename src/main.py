@@ -108,7 +108,8 @@ async def upload_images(image: UploadFile = File(None), url: str = None, table_n
 
 
 @app.post('/train/image/upload')  #上传训练单张图片
-async def train_image_upload(image: UploadFile = File(None), delete: bool = Form(False), group: str = Form(None), extra: str = Form(None)):
+async def train_image_upload(image: UploadFile = File(None), delete: bool = Form(False), group: str = Form(None),
+                             extra: str = Form(None)):
     print(f"/train/image/upload group {group}, extra {extra}")
     try:
         if image is None:
@@ -191,6 +192,59 @@ async def count_images():
         LOGGER.error(e)
         return {'status': False, 'msg': e}
 
+
+@app.get('/group/all')
+async def all_group():
+    iterator = MILVUS_CLI.client.query_iterator(collection_name=DEFAULT_TABLE, filter="", batch_size=20,
+                                                output_fields=["id", "meta"])
+    groups = []
+    while True:
+        tmp = iterator.next()
+        if not tmp:
+            iterator.close()
+            break
+        for item in tmp:
+            if "group" in item["meta"]:
+                group = item["meta"]["group"]
+                if group not in groups:
+                    groups.append(group)
+    return {
+        "status": True,
+        "data": groups
+    }
+
+@app.get('/images/all')
+async def query_images(group: str):
+    targetFilter = ""
+    if group is not None and group != "":
+        targetFilter = f'meta["group"] == "{group}"'
+    iterator = MILVUS_CLI.client.query_iterator(collection_name=DEFAULT_TABLE, filter=targetFilter, batch_size=20,
+                                                output_fields=["id", "uuid"])
+    results = []
+    while True:
+        tmp = iterator.next()
+        if not tmp:
+            iterator.close()
+            break
+        results += tmp
+    return {'status': True, 'data': results}
+
+
+@app.get('/images/info/ids')
+async def query_images_ids(ids):
+    targetFilter = ""
+    if ids is None:
+        return {
+            'status': False,
+            'error': "参数非法"
+        }
+    ids = str.split(ids,",")
+    print(ids)
+    resList = MILVUS_CLI.client.get(collection_name=DEFAULT_TABLE, ids=ids, output_fields=["id","uuid","md5","meta"])
+    return {
+        "status": True,
+        "data": resList
+    }
 
 if __name__ == '__main__':
     uvicorn.run(app=app, host='0.0.0.0', port=5000)
