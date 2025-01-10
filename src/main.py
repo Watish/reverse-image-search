@@ -63,7 +63,7 @@ def get_img(uuid: str):
     if not os.path.exists(os.path.join(UPLOAD_PATH, f"{uuid}.{ext}")):
         return JSONResponse(status_code=404, content={
             "status": False,
-            "msg": "图片不存在"
+            "msg": "图片不存在" + os.path.join(UPLOAD_PATH, f"{uuid}.{ext}")
         })
     return FileResponse(path=os.path.join(UPLOAD_PATH, f"{uuid}.{ext}"), status_code=200)
 
