@@ -213,6 +213,7 @@ async def all_group():
         "data": groups
     }
 
+
 @app.get('/images/all')
 async def all_images(group: str):
     targetFilter = ""
@@ -238,16 +239,18 @@ async def query_images_ids(ids):
             'status': False,
             'error': "参数非法"
         }
-    rawIds = str.split(ids,",")
-    ids = []
+    rawIds = str.split(ids, ",")
+    resList = []
     for idStr in rawIds:
-        ids.append(int(idStr))
-    print(ids)
-    resList = MILVUS_CLI.client.get(collection_name=DEFAULT_TABLE, ids=ids, output_fields=["id","uuid","md5","meta"])
+        tmp = MILVUS_CLI.client.get(collection_name=DEFAULT_TABLE, ids=int(idStr), output_fields=["id", "uuid", "md5", "meta"])
+        if tmp:
+            resList.append(tmp)
+
     return {
         "status": True,
         "data": resList
     }
+
 
 if __name__ == '__main__':
     uvicorn.run(app=app, host='0.0.0.0', port=5000)
