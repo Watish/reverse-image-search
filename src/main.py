@@ -214,7 +214,7 @@ async def all_group():
     }
 
 @app.get('/images/all')
-async def query_images(group: str):
+async def all_images(group: str):
     targetFilter = ""
     if group is not None and group != "":
         targetFilter = f'meta["group"] == "{group}"'
