@@ -54,7 +54,7 @@ def get_img(uuid: str):
     print(imageItem)
     uuid = imageItem["uuid"]
     meta = imageItem["meta"]
-    if "ext" in meta:
+    if "ext" not in meta:
         return JSONResponse(status_code=404, content={
             "status": False,
             "msg": "图片不存在"
