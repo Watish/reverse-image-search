@@ -189,16 +189,16 @@ class InnerSearchFrom(BaseModel):
     topk: int = 10
 
 @app.post('/img/inner/search')
-async def inner_search(item: InnerSearchFrom):
+async def inner_search(form: InnerSearchFrom):
     group = ""
-    if item.group is not None:
-        group = item.group
-    if len(item.ids) == 0:
+    if form.group is not None:
+        group = form.group
+    if len(form.ids) == 0:
         return {
             "status": False,
             "msg": "参数为空"
         }
-    rawIds = item.ids
+    rawIds = form.ids
     ids = []
     for rawId in rawIds:
         ids.append(int(rawId))
@@ -206,7 +206,7 @@ async def inner_search(item: InnerSearchFrom):
     embeddingList = []
     for item in targetList:
         embeddingList.append(item["embedding"])
-    resList = MILVUS_CLI.search_vectors(collection_name=DEFAULT_TABLE,vectors=embeddingList,top_k=item.topk,group=group)
+    resList = MILVUS_CLI.search_vectors(collection_name=DEFAULT_TABLE,vectors=embeddingList,top_k=form.topk,group=group)
     rows = []
 
     print(resList)
