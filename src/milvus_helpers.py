@@ -174,15 +174,38 @@ class MilvusHelper:
 
     def search_vectors(self, collection_name, vectors, top_k, group):
         LOGGER.debug(f"Vectors for search: {vectors}")
-        print(len(vectors[0]))
-        print(vectors[0])
+        # if exclude_ids is None:
+        #     exclude_ids = []
+        # else:
+        #     targetIds = []
+        #     rawIds = exclude_ids
+        #     for rawId in rawIds:
+        #         targetIds.append(int(rawId))
+        #     exclude_ids = targetIds
+        # print(len(vectors[0]))
+        # print(vectors[0])
         try:
             filter = ""
-            if group is not None:
-                filter = f'meta["group"] == "{group}"'
+            tmpExprList = []
+            filter_params = {}
+            if group is not None and group != "":
+                tmpExprList.append(f'meta["group"] == "{group}"')
+            # if len(exclude_ids) > 0:
+            #     top_k += len(exclude_ids)
+            #     tmpExprList.append("id NOT IN {ids}")
+            #     filter_params["ids"] = exclude_ids
+                # for exclude_id in exclude_ids:
+                #     tmpExprList.append(f'id != {int(exclude_id)}')
+            if len(tmpExprList) > 0:
+                if len(tmpExprList) == 1:
+                    filter = tmpExprList[0]
+                if len(tmpExprList) >= 2:
+                    filter = ' AND '.join(tmpExprList)
+            print(f'filter: {filter}')
             search_params = {"metric_type": METRIC_TYPE, "params": {"nprobe": 16}}
             res = self.client.search(collection_name, data=vectors, anns_field="embedding", search_params=search_params
-                                     , limit=top_k, output_fields=["uuid"], filter=filter)
+                                     , limit=top_k, output_fields=["uuid"], filter=filter, filter_params=filter_params)
+
             LOGGER.debug(f"Successfully search in collection: {res}")
             return res
         except Exception as e:
@@ -193,9 +216,10 @@ class MilvusHelper:
         print(f"Dropping Image UUID : {uuid} , Group {group}")
         if group is None or group == "":
             self.client.delete(collection_name=collection_name,
-                                  filter=f"uuid == \"{uuid}\"")
+                               filter=f"uuid == \"{uuid}\"")
         else:
-            self.client.delete(collection_name=collection_name,filter=f"uuid == \"{uuid}\" and meta[\"group\"] == \"{group}\"")
+            self.client.delete(collection_name=collection_name,
+                               filter=f"uuid == \"{uuid}\" and meta[\"group\"] == \"{group}\"")
 
     def count(self, collection_name):
         try:

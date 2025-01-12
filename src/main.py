@@ -174,12 +174,48 @@ async def search_images(image: UploadFile = File(...), topk: int = Form(TOP_K), 
             f.write(content)
         f.close()
         res = do_search(DEFAULT_TABLE, img_path, topk, MODEL, MILVUS_CLI, group)
+        if len(res) > 0:
+            res = res[0]
         LOGGER.info("Successfully searched similar images!")
         os.unlink(img_path)  # 删除上传文件
         return {'status': True, 'data': res}
     except Exception as e:
         LOGGER.error(e)
         return {'status': False, 'msg': e}
+
+class InnerSearchFrom(BaseModel):
+    ids: list[str]
+    group: str | None = None,
+    topk: int = 10
+
+@app.post('/img/inner/search')
+async def inner_search(item: InnerSearchFrom):
+    group = ""
+    if item.group is not None:
+        group = item.group
+    if len(item.ids) == 0:
+        return {
+            "status": False,
+            "msg": "参数为空"
+        }
+    rawIds = item.ids
+    ids = []
+    for rawId in rawIds:
+        ids.append(int(rawId))
+    targetList = MILVUS_CLI.client.get(collection_name=DEFAULT_TABLE,ids=ids,output_fields=["id","embedding"])
+    embeddingList = []
+    for item in targetList:
+        embeddingList.append(item["embedding"])
+    resList = MILVUS_CLI.search_vectors(collection_name=DEFAULT_TABLE,vectors=embeddingList,top_k=item.topk,group=group)
+    rows = []
+
+    print(resList)
+
+
+    return {
+        'status': True,
+        'data': resList,
+    }
 
 
 @app.get('/img/count')
@@ -231,21 +267,46 @@ async def all_images(group: str):
         results += tmp
     return {'status': True, 'data': results}
 
+class InfoIDForm(BaseModel):
+    ids: list[str]
 
-@app.get('/images/info/ids')
-async def query_images_ids(ids):
-    targetFilter = ""
-    if ids is None:
+@app.post('/images/info/ids')
+async def query_images_ids(item: InfoIDForm):
+    if len(item.ids) < 1:
         return {
             'status': False,
             'error': "参数非法"
         }
-    rawIds = str.split(ids, ",")
+    rawIds = item.ids
     ids = []
     for idStr in rawIds:
         ids.append(int(idStr))
     print(ids)
     resList = MILVUS_CLI.client.get(collection_name=DEFAULT_TABLE, ids=ids, output_fields=["id", "uuid", "md5", "meta"])
+    return {
+        "status": True,
+        "data": resList
+    }
+
+
+class InfoUUIDForm(BaseModel):
+    uuids: list[str]
+
+
+@app.post('/images/info/uuids')
+async def query_image_uuids(item: InfoUUIDForm):
+    uuids = item.uuids
+    # print(uuids)
+    if len(uuids) < 1:
+        return {
+            'status': False,
+            "error": "缺少参数"
+        }
+    resList = []
+    for uuidStr in uuids:
+        tmp = MILVUS_CLI.client.query(collection_name=DEFAULT_TABLE, filter=f"uuid == \"{uuidStr}\" ", output_fields=["id", "uuid", "md5", "meta"])
+        if len(tmp) > 0:
+            resList.append(tmp[0])
     return {
         "status": True,
         "data": resList

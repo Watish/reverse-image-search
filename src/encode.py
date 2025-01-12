@@ -65,7 +65,7 @@ if __name__ == "__main__":
     imagePath = 'https://cross-java-images.oss-cn-zhangjiakou.aliyuncs.com/lglv998/abe83fc4cc91c91538e803bbf37cc886.jpg'
     res = ImageModel().image_extract_feat(img_path=imagePath)
     print(res)
-    # res = ImageModel().image_to_text(img_path=imagePath)
-    # print(res)
-    # res = ImageModel().image_text_extract_feat(img_path=imagePath)
-    # print(res)
+    res = ImageModel().image_to_text(img_path=imagePath)
+    print(res)
+    res = ImageModel().image_text_extract_feat(img_path=imagePath)
+    print(res)
